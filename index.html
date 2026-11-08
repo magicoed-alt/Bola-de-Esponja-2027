@@ -16,7 +16,7 @@
 <style>
 :root{--bg:#06121a;--panel:#0d2230;--panel2:#12303f;--cy:#22d3ee;--tx:#f4fbfd;--mut:#8fb3c0;--red:#ef4444}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;
+html,body{margin:0;height:100vh;min-height:100%;background:#06121a;overflow:hidden;overscroll-behavior:none;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:var(--tx);
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 input[type=text]{-webkit-user-select:text;user-select:text}
@@ -24,7 +24,7 @@ button{font-family:inherit;cursor:pointer}
 .hidden{display:none!important}
 
 /* palco fixo (rotação travada) */
-#root{position:fixed;left:50%;top:50%;overflow:hidden;background:var(--bg)}
+#root{position:fixed;left:0;top:0;overflow:hidden;background:var(--bg)}
 .screen{position:absolute;left:0;top:0;right:0;bottom:0}
 
 /* ---------- menu ---------- */
@@ -190,14 +190,25 @@ function getAngle(){
   return 0;
 }
 function layout(){
-  const vw=window.innerWidth, vh=window.innerHeight, ang=getAngle(), side=Math.abs(ang)===90;
-  L.ang=ang; L.W=side?vh:vw; L.H=side?vw:vh;
-  root.style.width=L.W+'px'; root.style.height=L.H+'px';
-  root.style.transform='translate(-50%,-50%) rotate('+(-ang)+'deg)';
+  const ang=getAngle(), side=Math.abs(ang)===90;
+  let W,H;
+  if(isStandalone){
+    // instalado na Tela de Início: o iOS informa innerHeight ~20pt menor que a tela (faixa preta embaixo).
+    // Usa o tamanho real do aparelho para o palco cobrir a tela inteira.
+    const a=screen.width,b=screen.height,nw=Math.min(a,b),nh=Math.max(a,b);
+    W=Math.max(nw,side?innerHeight:innerWidth); H=Math.max(nh,side?innerWidth:innerHeight);
+  }else{
+    W=side?innerHeight:innerWidth; H=side?innerWidth:innerHeight;
+  }
+  L.ang=ang; L.W=W; L.H=H;
+  const Vw=side?H:W, Vh=side?W:H;      // tela como o navegador a enxerga (girada se ±90)
+  root.style.width=W+'px'; root.style.height=H+'px';
+  root.style.transform='translate('+(Vw/2-W/2)+'px,'+(Vh/2-H/2)+'px) rotate('+(-ang)+'deg)';
   onLayout();
 }
 function toStage(cx,cy){            // coordenadas da tela -> coordenadas do palco
-  const dx=cx-innerWidth/2, dy=cy-innerHeight/2, a=L.ang*D2R, c=Math.cos(a), s=Math.sin(a);
+  const side=Math.abs(L.ang)===90, Vw=side?L.H:L.W, Vh=side?L.W:L.H;
+  const dx=cx-Vw/2, dy=cy-Vh/2, a=L.ang*D2R, c=Math.cos(a), s=Math.sin(a);
   return {x:dx*c-dy*s+L.W/2, y:dx*s+dy*c+L.H/2};
 }
 addEventListener('resize',layout);
@@ -505,6 +516,22 @@ async function enableSensors(){
   if(!sensorsOn){addEventListener('deviceorientation',onOri);sensorsOn=true}
   return true;
 }
+function setPageBg(css){document.documentElement.style.background=css;document.body.style.background=css}
+async function edgePageBg(blob){
+  if(!blob){setPageBg('#000');return}
+  try{
+    const img=await blobToImg(blob),w=32,h=48,c=document.createElement('canvas');c.width=w;c.height=h;
+    const g=c.getContext('2d'),sc=Math.max(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*sc,dh=img.naturalHeight*sc;
+    g.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+    const d=g.getImageData(0,h-2,w,2).data,cols=[];let r=0,gg=0,bb=0;
+    for(let x=0;x<w;x++){
+      let R=0,G=0,B=0;for(let y=0;y<2;y++){const i=(y*w+x)*4;R+=d[i];G+=d[i+1];B+=d[i+2]}
+      R=Math.round(R/2);G=Math.round(G/2);B=Math.round(B/2);cols.push('rgb('+R+','+G+','+B+')');r+=R;gg+=G;bb+=B;
+    }
+    if(L.ang===0)setPageBg('linear-gradient(to right,'+cols.join(',')+')');
+    else setPageBg('rgb('+Math.round(r/w)+','+Math.round(gg/w)+','+Math.round(bb/w)+')');
+  }catch(e){setPageBg('#000')}
+}
 function decode(url){return loadImg(url).catch(()=>null)}
 function place(){ballEl.style.transform='translate3d('+(S.x-S.r)+'px,'+(S.y-S.r)+'px,0)'}
 function sizeBall(){S.r=Math.max(10,S.size*L.W/2);ballEl.style.width=ballEl.style.height=(S.r*2)+'px'}
@@ -521,6 +548,7 @@ async function enterShow(){
   if(bu)showUrls.push(bu);showUrls.push(pu);
   await Promise.all([bu?decode(bu):0,decode(pu)]);
   showBg.style.backgroundImage=bu?'url('+bu+')':'none';
+  edgePageBg(bg?bg.blob:null);
   ballImg.style.backgroundImage='url('+pu+')';
   S.size=ball.size||.28;S.vis=false;S.vx=S.vy=0;pop.classList.remove('on');sizeBall();
   S.x=L.W/2;S.y=L.H/2;place();
@@ -530,6 +558,7 @@ async function enterShow(){
 }
 function exitShow(){
   mode='menu';clickLock=performance.now()+700;
+  document.documentElement.style.background='';document.body.style.background='';
   show.classList.add('hidden');menu.classList.remove('hidden');
   S.vis=false;pop.classList.remove('on');
   if(sensorsOn){removeEventListener('deviceorientation',onOri);sensorsOn=false}

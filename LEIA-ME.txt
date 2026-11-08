@@ -1,0 +1,7 @@
+BOLA DE ESPUMA - Eduardo Braz · Digital Magic
+
+1) Suba TODOS os arquivos desta pasta para um repositório do GitHub (pode ser uma pasta nova dentro do que você já usa) e ative o GitHub Pages.
+2) No iPad, abra o link no Safari > Compartilhar > "Adicionar à Tela de Início". Abra sempre pelo ícone (tela cheia, sem barra do Safari).
+3) Abra uma vez com internet. Depois disso funciona offline.
+4) Toque em INICIAR e permita "Movimento e Orientação" quando o iPad perguntar.
+5) Deslize na tela = mostra/esconde a bola. Toque 3 vezes = volta ao menu.

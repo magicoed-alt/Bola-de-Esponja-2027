@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bola de Espuma">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#06121a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Bola de Espuma</title>
+<style>
+:root{--bg:#06121a;--panel:#0d2230;--panel2:#12303f;--cy:#22d3ee;--tx:#f4fbfd;--mut:#8fb3c0;--red:#ef4444}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:var(--tx);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+input[type=text]{-webkit-user-select:text;user-select:text}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* palco fixo (rotação travada) */
+#root{position:fixed;left:50%;top:50%;overflow:hidden;background:var(--bg)}
+.screen{position:absolute;left:0;top:0;right:0;bottom:0}
+
+/* ---------- menu ---------- */
+#menu{display:flex;flex-direction:column;background:radial-gradient(120% 70% at 50% 0%,#0d2e40 0%,#06121a 62%)}
+#menuScroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:46px 26px 20px}
+.brand{margin-bottom:26px}
+.kicker{font-size:12px;letter-spacing:.22em;color:var(--cy);font-weight:600}
+h1{margin:6px 0 0;font-size:40px;letter-spacing:-.01em;font-weight:800}
+section{margin-bottom:26px}
+h3{margin:0 0 12px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:18px 14px}
+.cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.tile{width:100%;border-radius:16px;border:3px solid rgba(255,255,255,.12);background:#0b1b26 center/cover no-repeat;position:relative;overflow:hidden}
+.tile.bgt{aspect-ratio:3/4}
+.tile.bl{aspect-ratio:1/1;border-radius:50%}
+.tile.sel{border-color:var(--cy);box-shadow:0 0 0 4px rgba(34,211,238,.22)}
+.tile.add{display:flex;align-items:center;justify-content:center;border-style:dashed;border-color:rgba(34,211,238,.55);color:var(--cy);font-size:42px;font-weight:300;background:rgba(34,211,238,.06)}
+.cap{font-size:13px;color:var(--mut);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell.on .cap{color:var(--cy);font-weight:600}
+.mini{position:absolute;top:-6px;right:-6px;width:32px;height:32px;border-radius:50%;border:2px solid #06121a;background:#1b4357;color:#fff;display:flex;align-items:center;justify-content:center;padding:0}
+.mini svg{width:16px;height:16px}
+.row{display:flex;align-items:center;gap:14px;margin-bottom:14px;min-height:44px}
+.row label{width:128px;font-size:16px;flex:none}
+.row input[type=range]{flex:1}
+.row output{width:44px;text-align:right;color:var(--cy);font-weight:600}
+.seg{display:inline-flex;background:#0b1b26;border-radius:12px;padding:3px}
+.seg button{border:0;background:none;color:var(--mut);padding:10px 16px;border-radius:10px;font-size:15px}
+.seg button.on{background:var(--cy);color:#032631;font-weight:700}
+.seg.wide{display:flex}.seg.wide button{flex:1}
+.hint{margin:0 0 14px;font-size:13px;line-height:1.4;color:var(--mut)}
+.hint.c{text-align:center;margin:10px 0 0}
+input[type=range]{-webkit-appearance:none;appearance:none;height:30px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#2a4a5b}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;margin-top:-13px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+#menuFoot{padding:14px 26px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(rgba(6,18,26,0),#06121a 35%)}
+.btn{display:block;width:100%;border:0;border-radius:18px;padding:20px;font-size:21px;font-weight:800;letter-spacing:.06em}
+.btn.primary{background:linear-gradient(#35def5,#0fa6c8);color:#032631;box-shadow:0 8px 24px rgba(34,211,238,.28)}
+.btn.primary:active{transform:scale(.99)}
+
+/* ---------- show ---------- */
+#show{touch-action:none;background:#000;cursor:none}
+#showBg{position:absolute;left:0;top:0;right:0;bottom:0;background:#000 center/cover no-repeat}
+#ball{position:absolute;left:0;top:0;will-change:transform;pointer-events:none}
+#pop{width:100%;height:100%;opacity:0;transform:scale(.5);transition:opacity .14s ease-out,transform .2s cubic-bezier(.2,.9,.3,1.25)}
+#pop.on{opacity:1;transform:scale(1)}
+#root.instant #pop{transition:none}
+#ballImg{width:100%;height:100%;border-radius:50%;background:center/cover no-repeat;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+
+/* ---------- editor ---------- */
+#editor{display:flex;flex-direction:column;background:#06121a}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:42px 18px 10px;background:#0d2230}
+.bar h2{margin:0;font-size:18px}
+.ibtn,.lbtn{border:0;background:none;color:var(--cy);font-size:18px;min-width:70px;height:40px;display:flex;align-items:center}
+.ibtn svg{width:26px;height:26px}
+.lbtn{justify-content:flex-end;font-weight:700}
+.field{display:flex;align-items:center;gap:12px;padding:12px 18px}
+.field label{font-size:17px;flex:none}
+.field input{flex:1;min-width:0;border:0;border-radius:10px;padding:12px 14px;font-size:17px;background:#fff;color:#111;font-family:inherit}
+#editor .seg.wide{margin:0 18px 8px}
+#edBody{position:relative;flex:1;min-height:0;overflow:hidden}
+#cropWrap{position:absolute;overflow:hidden;touch-action:none}
+#cropImg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;-webkit-user-drag:none}
+#cropCircle{position:absolute;border:3px solid var(--cy);border-radius:50%;box-shadow:0 0 0 3000px rgba(0,0,0,.58);pointer-events:none}
+#sizeStage{position:absolute;overflow:hidden;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:#000}
+#sizeBg{position:absolute;left:0;top:0;right:0;bottom:0;background:#000 center/cover no-repeat}
+#sizeBall{position:absolute;border-radius:50%;background:center/cover no-repeat;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.sliderRow{display:flex;align-items:center;gap:12px;padding:8px 22px 0}
+.sliderRow input{flex:1}
+.sliderRow span{font-size:14px;color:var(--mut);width:110px}
+#editor .hint{padding:0 22px 22px}
+
+/* ---------- modal / toast ---------- */
+#modal{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+.dlg{width:min(86%,420px);background:#12303f;border-radius:18px;padding:22px;text-align:center}
+.dlg p{margin:0 0 18px;font-size:18px}
+.dlg .acts{display:flex;gap:10px}
+.dlg button{flex:1;border:0;border-radius:12px;padding:14px;font-size:17px;font-weight:600;background:#1b4357;color:#fff}
+.dlg button.danger{background:var(--red)}
+#toast{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);max-width:86%;background:rgba(10,30,42,.96);border:1px solid rgba(34,211,238,.5);padding:12px 18px;border-radius:14px;font-size:15px;text-align:center;z-index:60}
+</style>
+</head>
+<body>
+<div id="root">
+
+  <!-- MENU -->
+  <div id="menu" class="screen">
+    <div id="menuScroll">
+      <div class="brand">
+        <div class="kicker">EDUARDO BRAZ · DIGITAL MAGIC</div>
+        <h1>Bola de Espuma</h1>
+      </div>
+      <section>
+        <h3>Fundo</h3>
+        <div id="bgGrid" class="grid"></div>
+      </section>
+      <section>
+        <h3>Bola</h3>
+        <div id="ballGrid" class="grid"></div>
+      </section>
+      <section>
+        <h3>Ajustes</h3>
+        <div class="row"><label>Sensibilidade</label><input type="range" id="sens" min="0.4" max="2" step="0.1"><output id="sensOut"></output></div>
+        <div class="row"><label>Gravidade</label>
+          <div class="seg" id="segMode"><button data-v="real">Real</button><button data-v="level">Nivelada</button></div></div>
+        <p class="hint" id="modeHint"></p>
+        <div class="row"><label>Efeito</label>
+          <div class="seg" id="segFx"><button data-v="soft">Suave</button><button data-v="instant">Instantâneo</button></div></div>
+      </section>
+    </div>
+    <div id="menuFoot">
+      <button id="startBtn" class="btn primary">INICIAR</button>
+      <p class="hint c">Deslize na tela para mostrar / esconder a bola · Toque 3 vezes para voltar ao menu</p>
+    </div>
+  </div>
+
+  <!-- SHOW -->
+  <div id="show" class="screen hidden">
+    <div id="showBg"></div>
+    <div id="ball"><div id="pop"><div id="ballImg"></div></div></div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="editor" class="screen hidden">
+    <div class="bar">
+      <button id="edDel" class="ibtn" aria-label="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg></button>
+      <h2>Ajustar bola</h2>
+      <button id="edDone" class="lbtn">Concluído</button>
+    </div>
+    <div class="field"><label for="edName">Nome da bola:</label><input id="edName" type="text" maxlength="40" placeholder="Ex.: Bola vermelha" autocomplete="off"></div>
+    <div class="seg wide" id="edTabs"><button data-v="crop" class="on">1 · Recortar a bola</button><button data-v="size">2 · Tamanho na tela</button></div>
+    <div id="edBody">
+      <div id="cropWrap"><img id="cropImg" alt="" draggable="false"><div id="cropCircle"></div></div>
+      <div id="sizeStage" class="hidden"><div id="sizeBg"></div><div id="sizeBall"></div></div>
+    </div>
+    <div class="sliderRow"><span id="sliderLbl"></span><input type="range" id="edSlider"></div>
+    <p class="hint c" id="edHint"></p>
+  </div>
+
+  <div id="modal" class="hidden"><div class="dlg"><p id="modalMsg"></p><div class="acts"><button id="modalNo">Cancelar</button><button id="modalYes" class="danger">Excluir</button></div></div></div>
+  <div id="toast" class="hidden"></div>
+</div>
+
+<input type="file" id="fileBg" accept="image/*" multiple hidden>
+<input type="file" id="fileBall" accept="image/*" hidden>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const D2R=Math.PI/180;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+const root=$('#root'), menu=$('#menu'), show=$('#show'), editor=$('#editor');
+const isStandalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+let mode='menu', clickLock=0;
+
+/* ================= palco fixo: rotação da tela travada em retrato ================= */
+const L={W:768,H:1024,ang:0};
+function getAngle(){
+  if(typeof window.orientation==='number') return window.orientation;          // iOS / iPadOS
+  const a=screen.orientation&&screen.orientation.angle;
+  if(typeof a==='number'){let v=((-a%360)+360)%360; if(v>180)v-=360; return v;}
+  return 0;
+}
+function layout(){
+  const vw=window.innerWidth, vh=window.innerHeight, ang=getAngle(), side=Math.abs(ang)===90;
+  L.ang=ang; L.W=side?vh:vw; L.H=side?vw:vh;
+  root.style.width=L.W+'px'; root.style.height=L.H+'px';
+  root.style.transform='translate(-50%,-50%) rotate('+(-ang)+'deg)';
+  onLayout();
+}
+function toStage(cx,cy){            // coordenadas da tela -> coordenadas do palco
+  const dx=cx-innerWidth/2, dy=cy-innerHeight/2, a=L.ang*D2R, c=Math.cos(a), s=Math.sin(a);
+  return {x:dx*c-dy*s+L.W/2, y:dx*s+dy*c+L.H/2};
+}
+addEventListener('resize',layout);
+addEventListener('orientationchange',()=>{layout();setTimeout(layout,80);setTimeout(layout,350)});
+root.addEventListener('click',e=>{if(performance.now()<clickLock){e.stopPropagation();e.preventDefault()}},true);
+['gesturestart','gesturechange','dblclick','contextmenu'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+
+/* ================= armazenamento ================= */
+let useMem=false; const mem={bgs:new Map(),balls:new Map()};
+let dbp=null;
+function openDB(){
+  if(dbp) return dbp;
+  dbp=new Promise((res,rej)=>{
+    try{
+      const rq=indexedDB.open('bola-espuma',1);
+      rq.onupgradeneeded=()=>{const d=rq.result;d.createObjectStore('bgs',{keyPath:'id'});d.createObjectStore('balls',{keyPath:'id'})};
+      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error);
+    }catch(e){rej(e)}
+  });
+  return dbp;
+}
+async function tx(store,modeRW,fn){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const t=db.transaction(store,modeRW), s=t.objectStore(store), r=fn(s);
+    t.oncomplete=()=>res(r&&r.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error);
+  });
+}
+async function dbAll(s){ if(useMem) return [...mem[s].values()]; try{return await tx(s,'readonly',st=>st.getAll())}catch(e){useMem=true;return [...mem[s].values()]} }
+async function dbPut(s,v){ mem[s].set(v.id,v); if(useMem) return; try{await tx(s,'readwrite',st=>st.put(v))}catch(e){useMem=true} }
+async function dbDel(s,id){ mem[s].delete(id); if(useMem) return; try{await tx(s,'readwrite',st=>st.delete(id))}catch(e){useMem=true} }
+
+let cfg={bg:'black',ball:null,sens:1,mode:'real',fx:'soft'};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem('bola-cfg')||'{}'))}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('bola-cfg',JSON.stringify(cfg))}catch(e){}};
+let bgs=[], balls=[];
+
+/* ================= utilidades de imagem ================= */
+function loadImg(url){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('img'));i.src=url})}
+async function blobToImg(b){const u=URL.createObjectURL(b);const i=await loadImg(u);setTimeout(()=>URL.revokeObjectURL(u),15000);return i}
+function canvasBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q))}
+async function fileToBlob(file,max,q){
+  const img=await blobToImg(file);
+  const w=img.naturalWidth,h=img.naturalHeight,sc=Math.min(1,max/Math.max(w,h));
+  const c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,0,0,c.width,c.height);
+  return canvasBlob(c,'image/jpeg',q);
+}
+async function renderBallPng(src,crop,loaded){
+  const img=loaded||await blobToImg(src), nw=img.naturalWidth, nh=img.naturalHeight, m=Math.min(nw,nh);
+  const r=crop.r*m, cx=crop.x*nw, cy=crop.y*nh;
+  const out=Math.max(64,Math.min(512,Math.round(r*2)));
+  const c=document.createElement('canvas');c.width=c.height=out;
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';
+  g.beginPath();g.arc(out/2,out/2,out/2-0.5,0,Math.PI*2);g.clip();
+  g.drawImage(img,cx-r,cy-r,2*r,2*r,0,0,out,out);
+  return canvasBlob(c,'image/png');
+}
+async function makeDefaultBall(){
+  const S=512,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d');
+  g.beginPath();g.arc(S/2,S/2,S/2,0,Math.PI*2);g.clip();
+  g.fillStyle='#e8281c';g.fillRect(0,0,S,S);
+  for(let i=0;i<9000;i++){
+    const x=Math.random()*S,y=Math.random()*S,light=Math.random()<.5;
+    g.fillStyle=light?'rgba(255,130,110,'+(.15+Math.random()*.25)+')':'rgba(120,0,0,'+(.12+Math.random()*.25)+')';
+    g.beginPath();g.arc(x,y,.6+Math.random()*1.6,0,Math.PI*2);g.fill();
+  }
+  const rg=g.createRadialGradient(S*.4,S*.34,S*.05,S/2,S/2,S/2);
+  rg.addColorStop(0,'rgba(255,255,255,.14)');rg.addColorStop(.65,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,0,0,.2)');
+  g.fillStyle=rg;g.fillRect(0,0,S,S);
+  const png=await canvasBlob(c,'image/png');
+  return {id:uid(),name:'Bola vermelha',src:png,crop:{x:.5,y:.5,r:.5},png,size:.28,created:Date.now()};
+}
+
+/* ================= toast / confirmação ================= */
+let toastT=0;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('hidden'),3600)}
+function ask(msg,yes){
+  return new Promise(res=>{
+    $('#modalMsg').textContent=msg;$('#modalYes').textContent=yes||'Excluir';$('#modal').classList.remove('hidden');
+    const done=v=>{$('#modal').classList.add('hidden');$('#modalYes').onclick=$('#modalNo').onclick=null;res(v)};
+    $('#modalYes').onclick=()=>done(true);$('#modalNo').onclick=()=>done(false);
+  });
+}
+
+/* ================= menu ================= */
+let menuUrls=[];
+const mkUrl=b=>{const u=URL.createObjectURL(b);menuUrls.push(u);return u};
+const SVG_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const SVG_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>';
+function div(cls,html){const d=document.createElement('div');d.className=cls;if(html!=null)d.innerHTML=html;return d}
+function renderMenu(){
+  menuUrls.forEach(u=>URL.revokeObjectURL(u));menuUrls=[];
+  const gb=$('#bgGrid');gb.innerHTML='';
+  const list=[{id:'black',name:'Preto'},...bgs];
+  list.forEach(b=>{
+    const cell=div('cell');cell.dataset.kind='bg';cell.dataset.id=b.id;
+    const t=div('tile bgt');
+    if(b.blob) t.style.backgroundImage='url('+mkUrl(b.blob)+')'; else t.style.background='#000';
+    t.addEventListener('click',()=>{cfg.bg=b.id;saveCfg();markSel()});
+    cell.append(t,div('cap'));cell.lastChild.textContent=b.name;
+    if(b.blob){
+      const x=document.createElement('button');x.className='mini';x.innerHTML=SVG_X;x.setAttribute('aria-label','Remover fundo');
+      x.addEventListener('click',async ev=>{ev.stopPropagation();
+        if(await ask('Remover este fundo?')){await dbDel('bgs',b.id);bgs=bgs.filter(z=>z.id!==b.id);if(cfg.bg===b.id)cfg.bg='black';saveCfg();renderMenu()}});
+      cell.append(x);
+    }
+    gb.append(cell);
+  });
+  const addBg=div('cell');const ab=div('tile bgt add','+');ab.addEventListener('click',()=>$('#fileBg').click());
+  addBg.append(ab,div('cap'));addBg.lastChild.textContent='Da galeria';gb.append(addBg);
+
+  const gl=$('#ballGrid');gl.innerHTML='';
+  balls.forEach(b=>{
+    const cell=div('cell');cell.dataset.kind='ball';cell.dataset.id=b.id;
+    const t=div('tile bl');t.style.backgroundImage='url('+mkUrl(b.png)+')';
+    t.addEventListener('click',()=>{cfg.ball=b.id;saveCfg();markSel()});
+    cell.append(t,div('cap'));cell.lastChild.textContent=b.name;
+    const e=document.createElement('button');e.className='mini';e.innerHTML=SVG_EDIT;e.setAttribute('aria-label','Editar bola');
+    e.addEventListener('click',ev=>{ev.stopPropagation();openEditor(b,false)});
+    cell.append(e);gl.append(cell);
+  });
+  const addBl=div('cell');const nb=div('tile bl add','+');nb.addEventListener('click',()=>$('#fileBall').click());
+  addBl.append(nb,div('cap'));addBl.lastChild.textContent='Nova bola';gl.append(addBl);
+  markSel();
+}
+function markSel(){
+  document.querySelectorAll('#menu .cell[data-kind]').forEach(c=>{
+    const on=(c.dataset.kind==='bg'?cfg.bg:cfg.ball)===c.dataset.id;
+    c.classList.toggle('on',on);c.querySelector('.tile').classList.toggle('sel',on);
+  });
+}
+function renderSettings(){
+  $('#sens').value=cfg.sens;$('#sensOut').textContent=cfg.sens.toFixed(1)+'×';
+  document.querySelectorAll('#segMode button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.mode));
+  document.querySelectorAll('#segFx button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.fx));
+  $('#modeHint').textContent=cfg.mode==='real'
+    ?'Real: a bola cai para o lado mais baixo do iPad, como um objeto de verdade.'
+    :'Nivelada: a bola fica parada onde apareceu e só rola quando você inclina o iPad a partir da posição em que ele estava.';
+  root.classList.toggle('instant',cfg.fx==='instant');
+}
+$('#sens').addEventListener('input',e=>{cfg.sens=parseFloat(e.target.value);saveCfg();renderSettings()});
+$('#segMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cfg.mode=b.dataset.v;saveCfg();renderSettings()});
+$('#segFx').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cfg.fx=b.dataset.v;saveCfg();renderSettings()});
+
+$('#fileBg').addEventListener('change',async e=>{
+  const files=[...e.target.files];e.target.value='';
+  for(const f of files){
+    try{
+      const blob=await fileToBlob(f,2048,.93);
+      const rec={id:uid(),name:'Fundo '+(bgs.length+1),blob,created:Date.now()};
+      await dbPut('bgs',rec);bgs.push(rec);cfg.bg=rec.id;
+    }catch(err){toast('Não consegui abrir essa imagem.')}
+  }
+  saveCfg();renderMenu();
+});
+$('#fileBall').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const src=await fileToBlob(f,1600,.92);
+    openEditor({id:uid(),name:'',src,crop:{x:.5,y:.5,r:.36},png:null,size:.28,created:Date.now()},true);
+  }catch(err){toast('Não consegui abrir essa imagem.')}
+});
+
+/* ================= editor da bola ================= */
+const E={tab:'crop',rec:null,isNew:false,img:null,nw:0,nh:0,dw:0,dh:0,crop:{x:.5,y:.5,r:.36},size:.28,srcUrl:null,prevUrl:null,bgUrl:null,dirty:true};
+const cropWrap=$('#cropWrap'),cropCircle=$('#cropCircle'),cropImg=$('#cropImg'),sizeStage=$('#sizeStage'),slider=$('#edSlider');
+async function openEditor(rec,isNew){
+  E.rec=rec;E.isNew=isNew;E.crop={...rec.crop};E.size=rec.size||.28;E.dirty=true;E.tab='crop';
+  $('#edName').value=rec.name||'';
+  try{
+    if(E.srcUrl)URL.revokeObjectURL(E.srcUrl);
+    E.srcUrl=URL.createObjectURL(rec.src);
+    E.img=await loadImg(E.srcUrl);E.nw=E.img.naturalWidth;E.nh=E.img.naturalHeight;
+  }catch(err){toast('Não consegui abrir a foto da bola.');return}
+  cropImg.src=E.srcUrl;
+  menu.classList.add('hidden');editor.classList.remove('hidden');mode='editor';
+  setTab('crop');
+}
+function closeEditor(){
+  editor.classList.add('hidden');menu.classList.remove('hidden');mode='menu';
+  if(E.srcUrl){URL.revokeObjectURL(E.srcUrl);E.srcUrl=null}
+  if(E.prevUrl){URL.revokeObjectURL(E.prevUrl);E.prevUrl=null}
+  if(E.bgUrl){URL.revokeObjectURL(E.bgUrl);E.bgUrl=null}
+  renderMenu();
+}
+function clampCrop(){
+  const m=Math.min(E.nw,E.nh),c=E.crop;
+  c.r=clamp(c.r,.04,.5);const rp=c.r*m;
+  c.x=clamp(c.x,rp/E.nw,1-rp/E.nw);c.y=clamp(c.y,rp/E.nh,1-rp/E.nh);
+}
+function setTab(t){
+  E.tab=t;
+  document.querySelectorAll('#edTabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===t));
+  cropWrap.classList.toggle('hidden',t!=='crop');sizeStage.classList.toggle('hidden',t!=='size');
+  if(t==='crop'){
+    slider.min=.1;slider.max=1;slider.step=.005;slider.value=E.crop.r/.5;
+    $('#sliderLbl').textContent='Tamanho do recorte';
+    $('#edHint').textContent='Arraste o círculo e ajuste o tamanho até ele cobrir só a bola.';
+    requestAnimationFrame(layoutEditor);
+  }else{
+    slider.min=.08;slider.max=.6;slider.step=.005;slider.value=E.size;
+    $('#sliderLbl').textContent='Tamanho na tela';
+    $('#edHint').textContent='Pré-visualização na proporção real do iPad, com o fundo escolhido.';
+    requestAnimationFrame(layoutEditor);
+    prepareSizePreview().then(()=>requestAnimationFrame(layoutEditor));
+  }
+}
+async function prepareSizePreview(){
+  if(E.bgUrl){URL.revokeObjectURL(E.bgUrl);E.bgUrl=null}
+  const bg=bgs.find(b=>b.id===cfg.bg);
+  $('#sizeBg').style.backgroundImage=bg?'url('+(E.bgUrl=URL.createObjectURL(bg.blob))+')':'none';
+  if(E.dirty||!E.prevUrl){
+    const png=await renderBallPng(E.rec.src,E.crop,E.img);
+    if(E.prevUrl)URL.revokeObjectURL(E.prevUrl);E.prevUrl=URL.createObjectURL(png);E.dirty=false;
+  }
+  $('#sizeBall').style.backgroundImage='url('+E.prevUrl+')';
+}
+function layoutEditor(){
+  const body=$('#edBody'),bw=body.clientWidth,bh=body.clientHeight;
+  if(E.tab==='crop'&&E.nw){
+    const sc=Math.min((bw-24)/E.nw,(bh-16)/E.nh);E.dw=E.nw*sc;E.dh=E.nh*sc;
+    Object.assign(cropWrap.style,{left:(bw-E.dw)/2+'px',top:(bh-E.dh)/2+'px',width:E.dw+'px',height:E.dh+'px'});
+    drawCircle();
+  }else if(E.tab==='size'){
+    let h=bh-16,w=h*L.W/L.H;if(w>bw-24){w=bw-24;h=w*L.H/L.W}
+    Object.assign(sizeStage.style,{left:(bw-w)/2+'px',top:(bh-h)/2+'px',width:w+'px',height:h+'px'});
+    const d=E.size*w;
+    Object.assign($('#sizeBall').style,{width:d+'px',height:d+'px',left:(w-d)/2+'px',top:(h-d)/2+'px'});
+  }
+}
+function drawCircle(){
+  clampCrop();
+  const m=Math.min(E.dw,E.dh),r=E.crop.r*m,cx=E.crop.x*E.dw,cy=E.crop.y*E.dh;
+  Object.assign(cropCircle.style,{left:(cx-r-3)+'px',top:(cy-r-3)+'px',width:(2*r+6)+'px',height:(2*r+6)+'px'});
+}
+slider.addEventListener('input',()=>{
+  const v=parseFloat(slider.value);
+  if(E.tab==='crop'){E.crop.r=v*.5;E.dirty=true;drawCircle()}
+  else{E.size=v;layoutEditor()}
+});
+$('#edTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v!==E.tab)setTab(b.dataset.v)});
+// arrastar / pinçar o círculo
+const ptrs=new Map();let pinch=null,dragStart=null;
+cropWrap.addEventListener('pointerdown',e=>{
+  e.preventDefault();cropWrap.setPointerCapture&&cropWrap.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,toStage(e.clientX,e.clientY));
+  if(ptrs.size===1){dragStart={p:{...ptrs.values().next().value},x:E.crop.x,y:E.crop.y}}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,r:E.crop.r}}
+});
+cropWrap.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;
+  const p=toStage(e.clientX,e.clientY);ptrs.set(e.pointerId,p);
+  if(ptrs.size>=2&&pinch){
+    const [a,b]=[...ptrs.values()];E.crop.r=pinch.r*(Math.hypot(a.x-b.x,a.y-b.y)/pinch.d);
+    slider.value=clamp(E.crop.r/.5,.1,1);
+  }else if(ptrs.size===1&&dragStart){
+    E.crop.x=dragStart.x+(p.x-dragStart.p.x)/E.dw;E.crop.y=dragStart.y+(p.y-dragStart.p.y)/E.dh;
+  }
+  E.dirty=true;drawCircle();
+});
+const endPtr=e=>{ptrs.delete(e.pointerId);pinch=null;dragStart=null;
+  if(ptrs.size===1){const q=ptrs.values().next().value;dragStart={p:{...q},x:E.crop.x,y:E.crop.y}}};
+cropWrap.addEventListener('pointerup',endPtr);cropWrap.addEventListener('pointercancel',endPtr);
+
+$('#edDone').addEventListener('click',async()=>{
+  try{
+    clampCrop();
+    const png=await renderBallPng(E.rec.src,E.crop,E.img);
+    const name=$('#edName').value.trim()||('Bola '+(balls.length+(E.isNew?1:0)));
+    const rec={...E.rec,name,crop:{...E.crop},png,size:E.size};
+    await dbPut('balls',rec);
+    const i=balls.findIndex(b=>b.id===rec.id);if(i>=0)balls[i]=rec;else balls.push(rec);
+    cfg.ball=rec.id;saveCfg();closeEditor();
+  }catch(err){toast('Não consegui salvar a bola.')}
+});
+$('#edDel').addEventListener('click',async()=>{
+  if(!(await ask(E.isNew?'Descartar esta bola?':'Excluir esta bola?',E.isNew?'Descartar':'Excluir')))return;
+  if(!E.isNew){
+    await dbDel('balls',E.rec.id);balls=balls.filter(b=>b.id!==E.rec.id);
+    if(!balls.length){const d=await makeDefaultBall();await dbPut('balls',d);balls.push(d)}
+    if(cfg.ball===E.rec.id)cfg.ball=balls[0].id;saveCfg();
+  }
+  closeEditor();
+});
+
+/* ================= show: bola + giroscópio ================= */
+const ballEl=$('#ball'),pop=$('#pop'),ballImg=$('#ballImg'),showBg=$('#showBg');
+const S={x:0,y:0,vx:0,vy:0,r:60,size:.28,vis:false,last:0,gs:{x:0,y:0},g0:{x:0,y:0}};
+let showUrls=[],sensorsOn=false,enteredAt=0,taps=[],wl=null;
+
+function onOri(e){
+  if(e.beta==null||e.gamma==null)return;
+  const b=e.beta*D2R,c=e.gamma*D2R;
+  // componente da gravidade no plano da tela (x: direita, y: baixo)
+  const gx=Math.sin(c)*Math.cos(b),gy=Math.sin(b);
+  S.gs.x+=(gx-S.gs.x)*.4;S.gs.y+=(gy-S.gs.y)*.4;
+}
+async function enableSensors(){
+  const DOE=window.DeviceOrientationEvent;
+  if(DOE&&typeof DOE.requestPermission==='function'){
+    const r=await DOE.requestPermission();
+    if(r!=='granted')return false;
+  }
+  if(!sensorsOn){addEventListener('deviceorientation',onOri);sensorsOn=true}
+  return true;
+}
+function decode(url){return loadImg(url).catch(()=>null)}
+function place(){ballEl.style.transform='translate3d('+(S.x-S.r)+'px,'+(S.y-S.r)+'px,0)'}
+function sizeBall(){S.r=Math.max(10,S.size*L.W/2);ballEl.style.width=ballEl.style.height=(S.r*2)+'px'}
+function onLayout(){
+  if(mode==='show'){sizeBall();S.x=clamp(S.x,S.r,L.W-S.r);S.y=clamp(S.y,S.r,L.H-S.r);place()}
+  else if(mode==='editor'){requestAnimationFrame(layoutEditor)}
+}
+async function enterShow(){
+  const ball=balls.find(b=>b.id===cfg.ball)||balls[0];
+  if(!ball){toast('Crie uma bola primeiro.');return}
+  const bg=bgs.find(b=>b.id===cfg.bg);
+  showUrls.forEach(u=>URL.revokeObjectURL(u));showUrls=[];
+  const bu=bg?URL.createObjectURL(bg.blob):null,pu=URL.createObjectURL(ball.png);
+  if(bu)showUrls.push(bu);showUrls.push(pu);
+  await Promise.all([bu?decode(bu):0,decode(pu)]);
+  showBg.style.backgroundImage=bu?'url('+bu+')':'none';
+  ballImg.style.backgroundImage='url('+pu+')';
+  S.size=ball.size||.28;S.vis=false;S.vx=S.vy=0;pop.classList.remove('on');sizeBall();
+  S.x=L.W/2;S.y=L.H/2;place();
+  menu.classList.add('hidden');show.classList.remove('hidden');mode='show';
+  enteredAt=performance.now();taps=[];S.last=enteredAt;
+  goFullscreen();lockWake();requestAnimationFrame(tick);
+}
+function exitShow(){
+  mode='menu';clickLock=performance.now()+700;
+  show.classList.add('hidden');menu.classList.remove('hidden');
+  S.vis=false;pop.classList.remove('on');
+  if(sensorsOn){removeEventListener('deviceorientation',onOri);sensorsOn=false}
+  leaveFullscreen();releaseWake();
+  showUrls.forEach(u=>URL.revokeObjectURL(u));showUrls=[];
+}
+function goFullscreen(){
+  if(isStandalone)return;
+  const el=document.documentElement,rf=el.requestFullscreen||el.webkitRequestFullscreen;
+  try{if(rf){const p=rf.call(el);if(p&&p.catch)p.catch(()=>{})}}catch(e){}
+}
+function leaveFullscreen(){
+  try{
+    if(document.fullscreenElement||document.webkitFullscreenElement){
+      const x=document.exitFullscreen||document.webkitExitFullscreen;if(x){const p=x.call(document);if(p&&p.catch)p.catch(()=>{})}
+    }
+  }catch(e){}
+}
+async function lockWake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function releaseWake(){try{if(wl){wl.release();wl=null}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mode==='show')lockWake()});
+
+function toggleBall(x,y){
+  if(S.vis){S.vis=false;pop.classList.remove('on');return}
+  S.vis=true;S.x=clamp(x,S.r,L.W-S.r);S.y=clamp(y,S.r,L.H-S.r);S.vx=S.vy=0;
+  S.g0=cfg.mode==='level'?{x:S.gs.x,y:S.gs.y}:{x:0,y:0};
+  place();pop.classList.add('on');
+}
+function tick(t){
+  if(mode!=='show')return;
+  requestAnimationFrame(tick);
+  const dt=Math.min(.04,Math.max(.001,(t-S.last)/1000));S.last=t;
+  if(!S.vis)return;
+  const G=3000*cfg.sens;
+  S.vx+=(S.gs.x-S.g0.x)*G*dt;S.vy+=(S.gs.y-S.g0.y)*G*dt;
+  const k=Math.exp(-1.3*dt);S.vx*=k;S.vy*=k;
+  S.x+=S.vx*dt;S.y+=S.vy*dt;
+  const REST=.35,r=S.r;
+  if(S.x<r){S.x=r;S.vx=S.vx<-60?-S.vx*REST:0}
+  if(S.x>L.W-r){S.x=L.W-r;S.vx=S.vx>60?-S.vx*REST:0}
+  if(S.y<r){S.y=r;S.vy=S.vy<-60?-S.vy*REST:0}
+  if(S.y>L.H-r){S.y=L.H-r;S.vy=S.vy>60?-S.vy*REST:0}
+  place();
+}
+// gestos: deslizar = mostra/esconde · 3 toques = menu
+const SWIPE=45,Gs={id:null,x:0,y:0,t:0,fired:false};
+function registerTap(){
+  const n=performance.now();if(n-enteredAt<500)return;
+  taps=taps.filter(t=>n-t<900);taps.push(n);
+  if(taps.length>=3){taps=[];exitShow()}
+}
+show.addEventListener('pointerdown',e=>{
+  e.preventDefault();const p=toStage(e.clientX,e.clientY);
+  Gs.id=e.pointerId;Gs.x=p.x;Gs.y=p.y;Gs.t=performance.now();Gs.fired=false;
+});
+show.addEventListener('pointermove',e=>{
+  if(e.pointerId!==Gs.id||Gs.fired)return;
+  const p=toStage(e.clientX,e.clientY);
+  if(Math.hypot(p.x-Gs.x,p.y-Gs.y)>=SWIPE&&performance.now()-enteredAt>400){Gs.fired=true;toggleBall(p.x,p.y)}
+});
+show.addEventListener('pointerup',e=>{
+  if(e.pointerId!==Gs.id)return;
+  const p=toStage(e.clientX,e.clientY),moved=Math.hypot(p.x-Gs.x,p.y-Gs.y),dt=performance.now()-Gs.t,fired=Gs.fired;
+  Gs.id=null;
+  if(!fired&&moved<24&&dt<500)registerTap();
+});
+show.addEventListener('pointercancel',e=>{if(e.pointerId===Gs.id)Gs.id=null});
+
+$('#startBtn').addEventListener('click',async()=>{
+  let ok=false;
+  try{ok=await enableSensors()}catch(err){ok=false}
+  if(!ok){toast('Giroscópio bloqueado. Ative em Ajustes › Safari › Movimento e Orientação e abra o app de novo.');return}
+  enterShow();
+});
+
+/* ================= início ================= */
+async function init(){
+  layout();
+  try{await navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  bgs=(await dbAll('bgs')).sort((a,b)=>a.created-b.created);
+  balls=(await dbAll('balls')).sort((a,b)=>a.created-b.created);
+  if(!balls.length){const d=await makeDefaultBall();await dbPut('balls',d);balls.push(d)}
+  if(!balls.find(b=>b.id===cfg.ball))cfg.ball=balls[0].id;
+  if(cfg.bg!=='black'&&!bgs.find(b=>b.id===cfg.bg))cfg.bg='black';
+  saveCfg();renderSettings();renderMenu();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+// ganchos para teste automatizado
+window.__bola={tilt:(beta,gamma)=>onOri({beta,gamma}),state:()=>({mode,S,L,cfg}),toStage,E,prep:()=>prepareSizePreview()};
+init();
+})();
+</script>
+</body>
+</html>
